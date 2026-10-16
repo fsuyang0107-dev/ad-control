@@ -29,6 +29,7 @@ enable_testing()
 find_package(GTest REQUIRED)
 
 add_executable(adc_test
+  test/test_types.cpp
   test/test_vehicle_model.cpp
   test/test_trajectory.cpp
 )
