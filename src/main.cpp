@@ -1,66 +1,41 @@
-#include <cmath>
 #include <cstdio>
-#include <cstdlib>
-#include <vector>
+#include <string>
 
-#include "adc/types.hpp"
-#include "adc/vehicle_model.hpp"
+#include "adc/trajectory.hpp"
 
 namespace {
 
-double AnalyticX(double x0, double y0, double yaw0, double v, double steer, double L, double t) {
-    const double w = v * std::tan(steer) / L;
-    return x0 + (v / w) * (std::sin(yaw0 + w * t) - std::sin(yaw0));
-}
+constexpr double kPi = 3.14159265358979323846;
 
-double AnalyticY(double x0, double y0, double yaw0, double v, double steer, double L, double t) {
-    const double w = v * std::tan(steer) / L;
-    return y0 - (v / w) * (std::cos(yaw0 + w * t) - std::cos(yaw0));
+void DumpTrajectory(const std::string& name, const adc::Trajectory& t) {
+    std::printf("\n=== %s ===\n", name.c_str());
+    std::printf("点数: %zu  长度: %.3f m\n", t.size(), t.length());
+    if (t.empty()) return;
+
+    double max_k = 0.0;
+    for (const auto& p : t.points()) max_k = std::max(max_k, std::abs(p.curvature));
+
+    std::printf("最大曲率: %.6f 1/m  (对应最小转弯半径 %.2f m)\n", max_k,
+                max_k > 1e-9 ? 1.0 / max_k : 0.0);
+    std::printf("%8s %10s %10s %10s %12s\n", "index", "x(m)", "y(m)", "yaw(rad)", "curvature");
+    const std::size_t step = t.size() / 8 < 1 ? 1 : t.size() / 8;
+    for (std::size_t i = 0; i < t.size(); i += step)
+        std::printf("%8zu %10.3f %10.3f %10.4f %12.6f\n", i, t[i].x, t[i].y, t[i].yaw,
+                    t[i].curvature);
 }
 
 }  // namespace
 
 int main() {
-    adc::VehicleParams p;
-    adc::VehicleModel model(p);
+    const double ds = 0.1;
+    const double v_ref = 10.0;
 
-    const double v = 10.0;
-    const double steer = 0.1;
-    const double t_total = 10.0;
-
-    const double ex = AnalyticX(0, 0, 0, v, steer, p.wheelbase, t_total);
-    const double ey = AnalyticY(0, 0, 0, v, steer, p.wheelbase, t_total);
-
-    std::printf("%-8s %-10s %16s %16s %10s\n",
-                "dt", "method", "x_error(m)", "y_error(m)", "ratio");
-    std::printf("----------------------------------------------------------------------\n");
-
-    double prev_euler = 0.0;
-
-    for (double dt : {0.1, 0.05, 0.02, 0.01}) {
-        const int steps = static_cast<int>(std::lround(t_total / dt));
-
-        adc::VehicleState s_rk4;
-        s_rk4.v = v;
-        adc::ControlCmd u;
-        u.steer = steer;
-
-        adc::VehicleState s_eul = s_rk4;
-
-        for (int i = 0; i < steps; ++i) {
-            model.StepKinematic(s_rk4, u, dt);
-            model.StepKinematicEuler(s_eul, u, dt);
-        }
-
-        const double err_rk4 = std::hypot(s_rk4.x - ex, s_rk4.y - ey);
-        const double err_eul = std::hypot(s_eul.x - ex, s_eul.y - ey);
-
-        const double ratio = (prev_euler > 0.0) ? prev_euler / err_eul : 0.0;
-        prev_euler = err_eul;
-
-        std::printf("%-8.3f %-10s %16.3e %16.3e\n", dt, "Euler", err_eul, 0.0);
-        std::printf("%-8.3f %-10s %16.3e %16.3e %10.2f\n", dt, "RK4", err_rk4, 0.0, ratio);
-    }
+    DumpTrajectory("直线 (20 m)", adc::MakeStraight(20.0, ds, v_ref));
+    DumpTrajectory("圆弧 (R=25 m, 90 deg)", adc::MakeArc(25.0, kPi / 2.0, ds, v_ref));
+    DumpTrajectory("双移线 (60 m, 横移 3.5 m)",
+                   adc::MakeDoubleLaneChange(60.0, 3.5, ds, v_ref));
+    DumpTrajectory("正弦 (50 m, 振幅 2 m, 2 周期)",
+                   adc::MakeSine(50.0, 2.0, 2.0, ds, v_ref));
 
     return 0;
 }

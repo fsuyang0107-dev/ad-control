@@ -8,6 +8,8 @@ namespace adc {
 /// s  : 状态向量,原地更新
 /// dt : 步长
 /// f  : 导数函数,输入状态返回 d(state)/dt
+/// &传参引用,修改实参;大对象传参的默认最佳实践就是 const Type&（常量引用）
+///std::function< 返回值类型 ( 参数1类型, 参数2类型, ... ) >
 inline void Rk4Step(std::vector<double>& s, double dt,
                     const std::function<std::vector<double>(const std::vector<double>&)>& f) {
     const std::size_t n = s.size();
