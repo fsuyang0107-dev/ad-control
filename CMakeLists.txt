@@ -11,7 +11,6 @@ endif()
 
 add_compile_options(-Wall -Wextra -Wpedantic)
 
-# ---- 核心库 ----
 add_library(adc_core
   src/vehicle_model.cpp
   src/trajectory.cpp
@@ -20,11 +19,9 @@ add_library(adc_core
 )
 target_include_directories(adc_core PUBLIC include)
 
-# ---- 可执行 ----
 add_executable(adc_sim src/main.cpp)
 target_link_libraries(adc_sim PRIVATE adc_core)
 
-# ---- 测试 ----
 enable_testing()
 find_package(GTest REQUIRED)
 
@@ -32,6 +29,9 @@ add_executable(adc_test
   test/test_types.cpp
   test/test_vehicle_model.cpp
   test/test_trajectory.cpp
+  test/test_metrics.cpp
+  test/test_sim_loop.cpp
+  test/test_ctrl.cpp
 )
 target_link_libraries(adc_test PRIVATE adc_core GTest::gtest_main)
 

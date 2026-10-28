@@ -1,45 +1,78 @@
 #pragma once
+
+#include <cstddef>
 #include <string>
+
 namespace adc {
+
 struct VehicleState {
-    double x{0.0}, y{0.0};
+    double x{0.0};
+    double y{0.0};
     double yaw{0.0};
     double v{0.0};
     double yaw_rate{0.0};
-    double curvature{0.0};
 };
 
-struct ControlCmd{
-    double steer{0.0};//Front wheel angle,left is positive
+struct ControlCmd {
+    double steer{0.0};
     double accel{0.0};
 };
-struct VehicleParams{
+
+struct VehicleParams {
     double wheelbase{2.7};
     double mass{1500.0};
-    double lf{1.2};//center of mass to front axle
+    double lf{1.2};
     double lr{1.5};
-    double Cf{80000.0};//Front axle cornering stiffness N/rad
+    double Cf{80000.0};
     double Cr{80000.0};
-    double Iz{2500.0};//moment of inertia
-    double max_steer{0.5236};//rad=30degree
+    double Iz{2500.0};
+    double max_steer{0.5236};
     double max_accel{3.0};
     double max_decel{-5.0};
 };
-struct TrajPoint{
-    double x{0.0},y{0.0},yaw{0.0};
+
+struct TrajPoint {
+    double x{0.0};
+    double y{0.0};
+    double yaw{0.0};
     double v_ref{0.0};
     double curvature{0.0};
 };
-struct SimRecord{
+
+struct SimRecord {
     double t{0.0};
     VehicleState state;
     ControlCmd cmd;
     double e_y{0.0};
     double e_yaw{0.0};
+    double e_v{0.0};
+    double v_ref{0.0};
+    std::size_t ref_index{0};
 };
-struct SimConfig{
-    double dt{0.02};//50Hz
+
+/// 控制器类型
+enum class CtrlMode { kFeedForward = 0, kPurePursuit = 1, kStanley = 2 };
+
+/// 控制器参数
+struct CtrlParams {
+    // Pure Pursuit:前视距离 Ld = lookahead_base + lookahead_time * v
+    double lookahead_base{2.0};
+    double lookahead_time{0.08};
+    // Stanley:横向误差增益
+    double stanley_gain{4.0};
+    // 是否叠加曲率前馈
+    bool feedforward{true};
+};
+
+struct SimConfig {
+    double dt{0.02};
     double duration{20.0};
     std::string scenario{"straight"};
+    double init_y_offset{0.0};
+    double init_yaw_offset{0.0};
+    CtrlMode ctrl_mode{CtrlMode::kPurePursuit};
+    CtrlParams ctrl;
+    VehicleParams vehicle;
 };
+
 }  // namespace adc
