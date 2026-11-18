@@ -11,6 +11,7 @@ struct VehicleState {
     double yaw{0.0};
     double v{0.0};
     double yaw_rate{0.0};
+    double accel{0.0};  // 实际加速度(经执行器滞后后),m/s^2
 };
 
 struct ControlCmd {
@@ -29,6 +30,7 @@ struct VehicleParams {
     double max_steer{0.5236};
     double max_accel{3.0};
     double max_decel{-5.0};
+    double actuator_tau{0.15};  // 执行器一阶滞后时间常数,s
 };
 
 struct TrajPoint {
@@ -64,6 +66,14 @@ struct CtrlParams {
     bool feedforward{true};
 };
 
+/// 纵向 PI(D)控制参数
+struct LongCtrlParams {
+    double kp{3.0};              // (m/s^2) / (m/s)
+    double ki{0.25};             // (m/s^2) / (m/s * s)
+    double kd{0.0};
+    double integral_limit{1.0};  // 积分限幅,抗饱和
+};
+
 struct SimConfig {
     double dt{0.02};
     double duration{20.0};
@@ -72,6 +82,7 @@ struct SimConfig {
     double init_yaw_offset{0.0};
     CtrlMode ctrl_mode{CtrlMode::kPurePursuit};
     CtrlParams ctrl;
+    LongCtrlParams long_ctrl;
     VehicleParams vehicle;
 };
 

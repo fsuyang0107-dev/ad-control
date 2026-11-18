@@ -33,6 +33,24 @@ ControlCmd ComputeControl(CtrlMode mode, const Trajectory& traj, const VehicleSt
 
 std::string CtrlModeName(CtrlMode m);
 
+/// 纵向 PI(D)速度控制器(含条件积分抗饱和)
+class LongitudinalPid {
+public:
+    LongitudinalPid(const LongCtrlParams& p, double a_min, double a_max)
+        : p_(p), a_min_(a_min), a_max_(a_max) {}
+    void Reset();
+    /// 返回加速度指令,m/s^2;a_ff 为参考加速度前馈
+    double Compute(double v_ref, double v, double a_ff, double dt);
+    double integral() const { return integ_; }
+
+private:
+    LongCtrlParams p_;
+    double a_min_;
+    double a_max_;
+    double integ_{0.0};
+    double prev_err_{0.0};
+};
+
 class SimLoop {
 public:
     explicit SimLoop(const SimConfig& cfg) : cfg_(cfg), model_(cfg.vehicle) {}

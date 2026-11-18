@@ -1,5 +1,6 @@
 #include "adc/vehicle_model.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -37,6 +38,27 @@ void VehicleModel::StepKinematicEuler(VehicleState& s, const ControlCmd& u, doub
     s.y += dt * v * std::sin(s.yaw);
     s.yaw += dt * (v / L) * std::tan(u.steer);
     s.yaw_rate = v / L * std::tan(u.steer);
+}
+
+void VehicleModel::StepLongitudinal(VehicleState& s, const ControlCmd& u, double dt) const {
+    // 1) 指令限幅到物理可行范围
+    const double a_cmd = std::clamp(u.accel, params_.max_decel, params_.max_accel);
+
+    // 2) 执行器一阶滞后:a' = (a_cmd - a) / tau
+    //    用解析解,对任意 dt 都稳定
+    if (params_.actuator_tau > 1e-6) {
+        const double alpha = 1.0 - std::exp(-dt / params_.actuator_tau);
+        s.accel += (a_cmd - s.accel) * alpha;
+    } else {
+        s.accel = a_cmd;
+    }
+
+    // 3) 速度积分
+    s.v += s.accel * dt;
+    if (s.v < 0.0) {
+        s.v = 0.0;
+        s.accel = std::max(s.accel, 0.0);
+    }
 }
 
 }  // namespace adc

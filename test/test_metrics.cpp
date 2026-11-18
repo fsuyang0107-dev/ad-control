@@ -16,7 +16,7 @@ adc::SimRecord MakeRec(double t, double e_y, double e_yaw, double accel = 0.0) {
     r.t = t;
     r.e_y = e_y;
     r.e_yaw = e_yaw;
-    r.cmd.accel = accel;
+    r.state.accel = accel;   // jerk 用实际加速度
     return r;
 }
 }  // namespace

@@ -40,7 +40,8 @@ Metrics ComputeMetrics(const std::vector<SimRecord>& recs) {
     for (std::size_t i = 1; i < recs.size(); ++i) {
         const double dt = recs[i].t - recs[i - 1].t;
         if (dt > 1e-12) {
-            const double j = (recs[i].cmd.accel - recs[i - 1].cmd.accel) / dt;
+            // jerk 用【实际加速度】—— 这才是乘客感受到的量
+            const double j = (recs[i].state.accel - recs[i - 1].state.accel) / dt;
             m.max_jerk = std::max(m.max_jerk, std::abs(j));
         }
     }

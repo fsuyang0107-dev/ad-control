@@ -32,6 +32,7 @@ add_executable(adc_test
   test/test_metrics.cpp
   test/test_sim_loop.cpp
   test/test_ctrl.cpp
+  test/test_longitudinal.cpp
 )
 target_link_libraries(adc_test PRIVATE adc_core GTest::gtest_main)
 

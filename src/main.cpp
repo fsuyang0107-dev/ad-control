@@ -36,6 +36,17 @@ adc::Trajectory BuildScenario(const std::string& name, double v) {
     return adc::MakeDoubleLaneChange(60.0, 3.5, ds, v);
 }
 
+/// 沿速度剖面累加行程时间
+double TravelTime(const adc::Trajectory& t) {
+    if (t.size() < 2) return 0.0;
+    double sum = 0.0;
+    for (std::size_t i = 1; i < t.size(); ++i) {
+        const double ds = std::hypot(t[i].x - t[i - 1].x, t[i].y - t[i - 1].y);
+        sum += ds / std::max(0.5 * (t[i].v_ref + t[i - 1].v_ref), 0.5);
+    }
+    return sum;
+}
+
 bool ParseMode(const std::string& s, adc::CtrlMode& out) {
     if (s == "ff" || s == "feedforward") { out = adc::CtrlMode::kFeedForward; return true; }
     if (s == "pp" || s == "pure_pursuit") { out = adc::CtrlMode::kPurePursuit; return true; }
@@ -82,6 +93,7 @@ int main(int argc, char** argv) {
     double v = 15.0;
     double init_y = 0.0;
     double init_yaw = 0.0;
+    double a_lat_max = 0.0;
 
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
@@ -97,11 +109,15 @@ int main(int argc, char** argv) {
         else if (a == "--v") nextd(v);
         else if (a == "--init-y") nextd(init_y);
         else if (a == "--init-yaw") nextd(init_yaw);
+        else if (a == "--alat") nextd(a_lat_max);
         else if (a == "--csv" && i + 1 < argc) csv_path = argv[++i];
         else if (a == "--help" || a == "-h") { PrintUsage(); return 0; }
     }
 
-    const adc::Trajectory traj = BuildScenario(scenario, v);
+    adc::Trajectory traj = BuildScenario(scenario, v);
+    if (a_lat_max > 0.0) {
+        adc::ApplySpeedLimit(traj, v, a_lat_max, 4.0, 2.0);
+    }
     if (traj.empty()) {
         std::fprintf(stderr, "错误: 场景 %s 生成了空轨迹\n", scenario.c_str());
         return 1;
@@ -112,7 +128,7 @@ int main(int argc, char** argv) {
     cfg.scenario = scenario;
     cfg.init_y_offset = init_y;
     cfg.init_yaw_offset = init_yaw;
-    cfg.duration = traj.length() / v;
+    cfg.duration = TravelTime(traj);
 
     std::printf("场景: %s | 轨迹长度: %.3f m | v: %.2f m/s | 时长: %.3f s\n", scenario.c_str(),
                 traj.length(), v, cfg.duration);

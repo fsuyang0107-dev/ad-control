@@ -1,5 +1,6 @@
 #include "adc/trajectory.hpp"
 
+#include <algorithm>
 #include <cmath>
 
 namespace adc {
@@ -163,6 +164,45 @@ Trajectory MakeSine(double length, double amplitude, double periods, double ds,
         traj.push_back(MakePoint(x, y, dydx, d2ydx2, v_ref));
     }
     return traj;
+}
+
+void ApplySpeedLimit(Trajectory& traj, double v_max, double a_lat_max, double a_dec_max,
+                     double a_acc_max) {
+    if (traj.empty() || v_max <= 0.0) return;
+
+    auto& pts = traj.points_mutable();
+
+    // 1) 曲率限速:横向加速度 a_lat = v^2 * kappa <= a_lat_max
+    for (auto& p : pts) {
+        const double k = std::abs(p.curvature);
+        double v = v_max;
+        if (k > 1e-9 && a_lat_max > 0.0) {
+            v = std::min(v_max, std::sqrt(a_lat_max / k));
+        }
+        p.v_ref = std::max(v, 0.0);
+    }
+
+    // 2) 反向传播:保证减得下来
+    if (a_dec_max > 0.0) {
+        for (std::size_t i = pts.size(); i-- > 1;) {
+            const double ds = std::hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+            if (ds <= 0.0) continue;
+            const double v_allowed =
+                std::sqrt(pts[i].v_ref * pts[i].v_ref + 2.0 * a_dec_max * ds);
+            pts[i - 1].v_ref = std::min(pts[i - 1].v_ref, v_allowed);
+        }
+    }
+
+    // 3) 正向传播:保证加得上去
+    if (a_acc_max > 0.0) {
+        for (std::size_t i = 1; i < pts.size(); ++i) {
+            const double ds = std::hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+            if (ds <= 0.0) continue;
+            const double v_allowed =
+                std::sqrt(pts[i - 1].v_ref * pts[i - 1].v_ref + 2.0 * a_acc_max * ds);
+            pts[i].v_ref = std::min(pts[i].v_ref, v_allowed);
+        }
+    }
 }
 
 }  // namespace adc

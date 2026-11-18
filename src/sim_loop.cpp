@@ -96,6 +96,31 @@ ControlCmd ComputeControl(CtrlMode mode, const Trajectory& traj, const VehicleSt
     return FeedForward(rp, cfg.vehicle);
 }
 
+void LongitudinalPid::Reset() {
+    integ_ = 0.0;
+    prev_err_ = 0.0;
+}
+
+double LongitudinalPid::Compute(double v_ref, double v, double a_ff, double dt) {
+    const double err = v_ref - v;   // 正 = 需要加速
+
+    // 候选积分(梯形)
+    double cand = integ_ + 0.5 * (err + prev_err_) * dt;
+    cand = std::clamp(cand, -p_.integral_limit, p_.integral_limit);
+
+    // 条件积分抗饱和:输出饱和且误差会加剧饱和时,冻结积分
+    const double u_unsat = a_ff + p_.kp * err + p_.ki * cand;
+    const bool saturated = (u_unsat > a_max_) || (u_unsat < a_min_);
+    const bool worsen = (err > 0.0 && u_unsat > a_max_) || (err < 0.0 && u_unsat < a_min_);
+    if (!(saturated && worsen)) {
+        integ_ = cand;
+    }
+    prev_err_ = err;
+
+    const double u = a_ff + p_.kp * err + p_.ki * integ_;
+    return std::clamp(u, a_min_, a_max_);
+}
+
 std::string CtrlModeName(CtrlMode m) {
     switch (m) {
         case CtrlMode::kFeedForward: return "feedforward";
@@ -124,6 +149,9 @@ std::vector<SimRecord> SimLoop::Run(const Trajectory& ref) const {
 
     out.reserve(static_cast<std::size_t>(steps) + 1);
 
+    LongitudinalPid pid(cfg_.long_ctrl, cfg_.vehicle.max_decel, cfg_.vehicle.max_accel);
+    pid.Reset();
+
     for (int k = 0; k <= steps; ++k) {
         const std::size_t idx = FindNearest(ref, s);
         const TrajPoint& rp = ref[idx];
@@ -134,7 +162,16 @@ std::vector<SimRecord> SimLoop::Run(const Trajectory& ref) const {
         const double e_yaw = NormalizeAngle(s.yaw - rp.yaw);
         const double e_v = s.v - rp.v_ref;
 
-        const ControlCmd u = ComputeControl(cfg_.ctrl_mode, ref, s, rp, idx, cfg_);
+        // 纵向前馈:a_ff = v * dv/ds
+        double a_ff = 0.0;
+        if (idx + 1 < ref.size()) {
+            const double ds = std::hypot(ref[idx + 1].x - rp.x, ref[idx + 1].y - rp.y);
+            if (ds > 1e-9) a_ff = rp.v_ref * (ref[idx + 1].v_ref - rp.v_ref) / ds;
+        }
+        a_ff = std::clamp(a_ff, cfg_.vehicle.max_decel, cfg_.vehicle.max_accel);
+
+        ControlCmd u = ComputeControl(cfg_.ctrl_mode, ref, s, rp, idx, cfg_);
+        u.accel = pid.Compute(rp.v_ref, s.v, a_ff, dt);
 
         SimRecord rec;
         rec.t = k * dt;
@@ -147,8 +184,8 @@ std::vector<SimRecord> SimLoop::Run(const Trajectory& ref) const {
         rec.ref_index = idx;
         out.push_back(rec);
 
-        model_.StepKinematic(s, u, dt);
-        s.v = rp.v_ref;
+        model_.StepLongitudinal(s, u, dt);   // 先更新加速度与速度
+        model_.StepKinematic(s, u, dt);      // 再用新速度推进位姿
     }
     return out;
 }

@@ -17,6 +17,7 @@ public:
     const TrajPoint& operator[](std::size_t i) const { return pts_[i]; }
     const std::vector<TrajPoint>& points() const { return pts_; }
     void reserve(std::size_t n) { pts_.reserve(n); }
+    std::vector<TrajPoint>& points_mutable() { return pts_; }
 
     /// 沿轨迹的累计长度,m
     double length() const;
@@ -42,5 +43,12 @@ Trajectory MakeDoubleLaneChange(double length, double offset, double ds, double 
 /// 正弦:s 形,振幅 amplitude,periods 个完整周期
 Trajectory MakeSine(double length, double amplitude, double periods, double ds,
                     double v_ref);
+
+/// 按曲率分配参考速度剖面,并做双向动力学可行性修正
+///   1) 曲率限速: v_ref(i) = min(v_max, sqrt(a_lat_max / |kappa_i|))
+///   2) 反向传播: 保证减速度 <= a_dec_max
+///   3) 正向传播: 保证加速度 <= a_acc_max(缺了这步剖面会不可行)
+void ApplySpeedLimit(Trajectory& traj, double v_max, double a_lat_max, double a_dec_max,
+                     double a_acc_max);
 
 }  // namespace adc

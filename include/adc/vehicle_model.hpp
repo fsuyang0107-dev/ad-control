@@ -21,6 +21,9 @@ public:
     /// 用显式欧拉法推进一个时间步(仅用于精度对比)
     void StepKinematicEuler(VehicleState& s, const ControlCmd& u, double dt) const;
 
+    /// 纵向:执行器一阶滞后 + 速度积分
+    void StepLongitudinal(VehicleState& s, const ControlCmd& u, double dt) const;
+
 private:
     VehicleParams params_;
 };
