@@ -50,6 +50,8 @@ struct SimRecord {
     double e_v{0.0};
     double v_ref{0.0};
     std::size_t ref_index{0};
+    double ref_x{0.0};   // 最近参考点坐标(便于离线画图对比)
+    double ref_y{0.0};
 };
 
 /// 控制器类型

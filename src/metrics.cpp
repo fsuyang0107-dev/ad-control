@@ -53,13 +53,14 @@ bool WriteCsv(const std::vector<SimRecord>& recs, const std::string& path) {
     if (f == nullptr) return false;
 
     std::fprintf(f,
-                 "t,x,y,yaw,v,yaw_rate,steer,accel,e_y,e_yaw,e_v,v_ref,ref_index\n");
+                 "t,x,y,yaw,v,yaw_rate,steer,accel,e_y,e_yaw,e_v,v_ref,ref_index,ref_x,ref_y\n");
     for (const auto& r : recs) {
         std::fprintf(f,
-                     "%.6f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%zu\n",
+                     "%.6f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%.9f,%zu,"
+                     "%.9f,%.9f\n",
                      r.t, r.state.x, r.state.y, r.state.yaw, r.state.v,
                      r.state.yaw_rate, r.cmd.steer, r.cmd.accel, r.e_y, r.e_yaw,
-                     r.e_v, r.v_ref, r.ref_index);
+                     r.e_v, r.v_ref, r.ref_index, r.ref_x, r.ref_y);
     }
     std::fclose(f);
     return true;

@@ -182,6 +182,8 @@ std::vector<SimRecord> SimLoop::Run(const Trajectory& ref) const {
         rec.e_v = e_v;
         rec.v_ref = rp.v_ref;
         rec.ref_index = idx;
+        rec.ref_x = rp.x;
+        rec.ref_y = rp.y;
         out.push_back(rec);
 
         model_.StepLongitudinal(s, u, dt);   // 先更新加速度与速度
