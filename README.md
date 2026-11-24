@@ -1,5 +1,7 @@
 # ad-control
 
+[![ci](https://github.com/fsuyang0107-dev/ad-control/actions/workflows/ci.yml/badge.svg)](https://github.com/fsuyang0107-dev/ad-control/actions/workflows/ci.yml)
+
 自动驾驶**横纵向控制算法**仿真平台。从零实现车辆运动学模型、RK4 积分器、四种标准参考轨迹、
 三种横向控制器与纵向 PI 控制，用 **127 个单元测试**保证每个数字可复现。
 
