@@ -132,7 +132,7 @@ python3 python/plot.py --out docs/figures/out.png --labels stanley results/dlc.c
 
 ## 实现要点
 
-以下几处是调试中发现并修正的设计决定，不是照抄公式：
+以下几处是调试中发现并修正的设计决定：
 
 | # | 决定 | 原因 |
 |---|---|---|
