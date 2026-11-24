@@ -21,8 +21,15 @@ public:
     /// 用显式欧拉法推进一个时间步(仅用于精度对比)
     void StepKinematicEuler(VehicleState& s, const ControlCmd& u, double dt) const;
 
-    /// 纵向:执行器一阶滞后 + 速度积分
+    /// 执行器一阶滞后:更新 s.accel
+    void UpdateActuator(VehicleState& s, const ControlCmd& u, double dt) const;
+
+    /// 纵向(运动学配套):执行器 + 速度积分
     void StepLongitudinal(VehicleState& s, const ControlCmd& u, double dt) const;
+
+    /// 二自由度动力学模型:6 状态 RK4
+    /// 状态 = [vx, vy, r, X_rear, Y_rear, psi]
+    void StepDynamic(VehicleState& s, const ControlCmd& u, double dt) const;
 
 private:
     VehicleParams params_;

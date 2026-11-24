@@ -71,8 +71,8 @@ ControlCmd StanleyCmd(const VehicleState& s, const TrajPoint& rp, const VehicleP
     double steer = 0.0;
     if (cp.feedforward) steer += std::atan(rp.curvature * p.wheelbase);
 
-    // 航向项:车头偏左 -> 右打
-    steer -= e_yaw;
+    // 航向项:车头偏左 -> 右打(增益可调,动力学对象需要更小)
+    steer -= cp.stanley_yaw_gain * e_yaw;
 
     // 横偏项:车偏左 -> 右打
     const double v = std::max(s.v, 1.0);
@@ -186,8 +186,13 @@ std::vector<SimRecord> SimLoop::Run(const Trajectory& ref) const {
         rec.ref_y = rp.y;
         out.push_back(rec);
 
-        model_.StepLongitudinal(s, u, dt);   // 先更新加速度与速度
-        model_.StepKinematic(s, u, dt);      // 再用新速度推进位姿
+        if (cfg_.model == ModelKind::kDynamic) {
+            // 动力学模型:一步 RK4 同时推进 (vx, vy, r, X, Y, psi)
+            model_.StepDynamic(s, u, dt);
+        } else {
+            model_.StepLongitudinal(s, u, dt);   // 先更新加速度与速度
+            model_.StepKinematic(s, u, dt);      // 再用新速度推进位姿
+        }
     }
     return out;
 }

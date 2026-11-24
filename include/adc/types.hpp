@@ -12,6 +12,7 @@ struct VehicleState {
     double v{0.0};
     double yaw_rate{0.0};
     double accel{0.0};  // 实际加速度(经执行器滞后后),m/s^2
+    double vy{0.0};          // 重心侧向速度,m/s(仅动力学模型使用)
 };
 
 struct ControlCmd {
@@ -31,6 +32,8 @@ struct VehicleParams {
     double max_accel{3.0};
     double max_decel{-5.0};
     double actuator_tau{0.15};  // 执行器一阶滞后时间常数,s
+    double mu{0.9};             // 路面附着系数
+    double g{9.81};             // 重力加速度,m/s^2
 };
 
 struct TrajPoint {
@@ -54,6 +57,9 @@ struct SimRecord {
     double ref_y{0.0};
 };
 
+/// 车辆模型类型
+enum class ModelKind { kKinematic = 0, kDynamic = 1 };
+
 /// 控制器类型
 enum class CtrlMode { kFeedForward = 0, kPurePursuit = 1, kStanley = 2 };
 
@@ -64,6 +70,8 @@ struct CtrlParams {
     double lookahead_time{0.08};
     // Stanley:横向误差增益
     double stanley_gain{4.0};
+    // Stanley:航向误差增益(运动学模型可设 1.0;动力学模型需要更小以免振荡)
+    double stanley_yaw_gain{1.0};
     // 是否叠加曲率前馈
     bool feedforward{true};
 };
@@ -82,6 +90,7 @@ struct SimConfig {
     std::string scenario{"straight"};
     double init_y_offset{0.0};
     double init_yaw_offset{0.0};
+    ModelKind model{ModelKind::kKinematic};
     CtrlMode ctrl_mode{CtrlMode::kPurePursuit};
     CtrlParams ctrl;
     LongCtrlParams long_ctrl;

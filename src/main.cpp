@@ -19,6 +19,7 @@ void PrintUsage() {
         "用法: adc_sim [选项]\n"
         "  --scenario <name>   场景: straight | arc | dlc | sine (默认 dlc)\n"
         "  --ctrl <name>       控制器: ff | pp | stanley (默认 pp)\n"
+        "  --model <kind>      车辆模型: kin | dyn (默认 kin)\n"
         "  --compare           依次跑三种控制器并输出对比表\n"
         "  --dt <sec>          仿真步长 (默认 0.01)\n"
         "  --v <m/s>           参考速度 (默认 15)\n"
@@ -94,6 +95,7 @@ int main(int argc, char** argv) {
     double init_y = 0.0;
     double init_yaw = 0.0;
     double a_lat_max = 0.0;
+    adc::ModelKind model = adc::ModelKind::kKinematic;
 
     for (int i = 1; i < argc; ++i) {
         const std::string a = argv[i];
@@ -110,6 +112,12 @@ int main(int argc, char** argv) {
         else if (a == "--init-y") nextd(init_y);
         else if (a == "--init-yaw") nextd(init_yaw);
         else if (a == "--alat") nextd(a_lat_max);
+        else if (a == "--model" && i + 1 < argc) {
+            const std::string m = argv[++i];
+            if (m == "dyn" || m == "dynamic") model = adc::ModelKind::kDynamic;
+            else if (m == "kin" || m == "kinematic") model = adc::ModelKind::kKinematic;
+            else { std::fprintf(stderr, "未知模型: %s\n", m.c_str()); return 1; }
+        }
         else if (a == "--csv" && i + 1 < argc) csv_path = argv[++i];
         else if (a == "--help" || a == "-h") { PrintUsage(); return 0; }
     }
@@ -128,11 +136,13 @@ int main(int argc, char** argv) {
     cfg.scenario = scenario;
     cfg.init_y_offset = init_y;
     cfg.init_yaw_offset = init_yaw;
+    cfg.model = model;
     cfg.duration = TravelTime(traj);
 
     std::printf("场景: %s | 轨迹长度: %.3f m | v: %.2f m/s | 时长: %.3f s\n", scenario.c_str(),
                 traj.length(), v, cfg.duration);
-    std::printf("步长: %.4f s | 初始横向偏差: %.3f m | 初始航向偏差: %.4f rad\n\n", dt, init_y,
+    std::printf("步长: %.4f s | 模型: %s | 初始横向偏差: %.3f m | 初始航向偏差: %.4f rad\n\n",
+                dt, model == adc::ModelKind::kDynamic ? "dynamic" : "kinematic", init_y,
                 init_yaw);
 
     if (compare) {
