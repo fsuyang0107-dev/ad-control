@@ -293,10 +293,13 @@ ControlCmd LateralMpc::Compute(const VehicleState& s, const MpcState& x,
         ok = CholeskySolve(Hc, negf, u);
     }
 
+    // J 中与 U 有关的部分:J = uᵀHu + 2fᵀu + const
+    //   QP 的目标 ½uᵀHu + fᵀu 恰好是它的一半。两者给出同一个 u
+    //   (正标量倍不改变最优解),但作为"代价数值"应报真实值。
     double cost = 0.0;
     for (int i = 0; i < N; ++i) {
-        cost += f[i] * u[i];
-        for (int j = 0; j < N; ++j) cost += 0.5 * u[i] * H[i][j] * u[j];
+        cost += 2.0 * f[i] * u[i];
+        for (int j = 0; j < N; ++j) cost += u[i] * H[i][j] * u[j];
     }
 
     const double raw = u.empty() ? 0.0 : u[0];

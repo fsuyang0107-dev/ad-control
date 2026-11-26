@@ -22,7 +22,7 @@ struct MpcState {
 /// 一次求解的诊断信息
 struct MpcInfo {
     bool ok{false};          ///< Cholesky 是否成功
-    double cost{0.0};        ///< 最优目标值
+    double cost{0.0};        ///< J 中与 U 有关的部分:uᵀHu + 2fᵀu(QP 目标是它的一半)
     double steer{0.0};       ///< 首步最优转角(限幅前)
     bool saturated{false};   ///< 是否超出转向限幅
 };
