@@ -111,10 +111,8 @@ void VehicleModel::StepDynamic(VehicleState& s, const ControlCmd& u, double dt) 
 
         const double cosd = std::cos(delta);
 
-        // 三个动力学方程
-        // 纵向: m(v̇_x − v_y·r) = F_xf·cosδ − F_yf·sinδ + F_xr
-        //   a_cmd 已包含纵向驱动力项,需补上侧向力的纵向分量
-        const double dvx = a_cmd + vy * r - (Fyf * std::sin(delta)) / m;
+        // 三个动力学方程(含 vx*r、vy*r 伪力项)
+        const double dvx = a_cmd + vy * r;
         const double dvy = (Fyf * cosd + Fyr) / m - vx * r;
         const double dr = (lf * Fyf * cosd - lr * Fyr) / Iz;
 
