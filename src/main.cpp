@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
                     "稳态|e_y|", "rmse_yaw", "调节时间", "最大转角");
         std::printf("%s\n", std::string(88, '-').c_str());
         for (auto m : {adc::CtrlMode::kFeedForward, adc::CtrlMode::kPurePursuit,
-                       adc::CtrlMode::kStanley}) {
+                       adc::CtrlMode::kStanley, adc::CtrlMode::kMpc}) {
             const auto r = RunOne(traj, cfg, m);
             double max_steer = 0.0;
             for (const auto& rec : r.records)
@@ -161,6 +161,10 @@ int main(int argc, char** argv) {
                         r.ss_max, r.metrics.rmse_yaw, r.settle, max_steer * 180.0 / kPi);
         }
         std::printf("\n稳态|e_y| 为最后 20%% 时段的最大横向误差;调节时间为 |e_y| 最后一次超过 5 cm 的时刻。\n");
+        if (cfg.vehicle.actuator_tau > 0.0 && (mode == adc::CtrlMode::kMpc || true)) {
+            std::printf("注:MPC 的内部模型为二自由度动力学模型;"
+                        "若 --model kin,属于刻意模型不匹配,MPC 会退化。\n");
+        }
         return 0;
     }
 
