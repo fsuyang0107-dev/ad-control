@@ -18,7 +18,7 @@ void PrintUsage() {
     std::printf(
         "用法: adc_sim [选项]\n"
         "  --scenario <name>   场景: straight | arc | dlc | sine (默认 dlc)\n"
-        "  --ctrl <name>       控制器: ff | pp | stanley (默认 pp)\n"
+        "  --ctrl <name>       控制器: ff | pp | stanley | mpc (默认 pp)\n"
         "  --model <kind>      车辆模型: kin | dyn (默认 kin)\n"
         "  --compare           依次跑三种控制器并输出对比表\n"
         "  --dt <sec>          仿真步长 (默认 0.01)\n"
@@ -52,6 +52,7 @@ bool ParseMode(const std::string& s, adc::CtrlMode& out) {
     if (s == "ff" || s == "feedforward") { out = adc::CtrlMode::kFeedForward; return true; }
     if (s == "pp" || s == "pure_pursuit") { out = adc::CtrlMode::kPurePursuit; return true; }
     if (s == "stanley") { out = adc::CtrlMode::kStanley; return true; }
+    if (s == "mpc") { out = adc::CtrlMode::kMpc; return true; }
     return false;
 }
 

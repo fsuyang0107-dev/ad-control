@@ -60,8 +60,21 @@ struct SimRecord {
 /// 车辆模型类型
 enum class ModelKind { kKinematic = 0, kDynamic = 1 };
 
+/// 线性 MPC 整定参数(放在这里以便 SimConfig 直接持有,避免循环依赖)
+struct MpcParams {
+    int horizon{20};          ///< 预测步数
+    double tau{0.02};         ///< 预测步长 [s]
+    double q_ey{20.0};        ///< 横向误差权重
+    double q_eyaw{5.0};       ///< 航向误差权重
+    double q_vy{0.2};         ///< 侧向速度权重
+    double q_r{0.2};          ///< 横摆角速度权重
+    double qf_scale{5.0};     ///< 终端权重倍数
+    double r_steer{2.0};      ///< 转角权重
+    bool use_constraints{true};  ///< 是否在优化内处理 |δ| ≤ max_steer
+};
+
 /// 控制器类型
-enum class CtrlMode { kFeedForward = 0, kPurePursuit = 1, kStanley = 2 };
+enum class CtrlMode { kFeedForward = 0, kPurePursuit = 1, kStanley = 2, kMpc = 3 };
 
 /// 控制器参数
 struct CtrlParams {
@@ -92,6 +105,7 @@ struct SimConfig {
     double init_yaw_offset{0.0};
     ModelKind model{ModelKind::kKinematic};
     CtrlMode ctrl_mode{CtrlMode::kPurePursuit};
+    MpcParams mpc;
     CtrlParams ctrl;
     LongCtrlParams long_ctrl;
     VehicleParams vehicle;

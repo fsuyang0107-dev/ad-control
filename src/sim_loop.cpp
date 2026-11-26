@@ -1,5 +1,7 @@
 #include "adc/sim_loop.hpp"
 
+#include "adc/mpc.hpp"
+
 #include <algorithm>
 #include <cmath>
 #include <limits>
@@ -83,6 +85,33 @@ ControlCmd StanleyCmd(const VehicleState& s, const TrajPoint& rp, const VehicleP
     return u;
 }
 
+namespace {
+
+/// 沿参考轨迹前方取 N 步曲率(步长按 v·tau 折算成点索引前进)
+std::vector<double> CurvaturePreview(const Trajectory& traj, std::size_t idx, double v,
+                                     double tau, int n) {
+    std::vector<double> kap(static_cast<std::size_t>(n), 0.0);
+    if (traj.empty()) return kap;
+
+    double ds = 0.1;
+    if (idx + 1 < traj.size()) {
+        const double d = std::hypot(traj[idx + 1].x - traj[idx].x,
+                                    traj[idx + 1].y - traj[idx].y);
+        if (d > 1e-9) ds = d;
+    }
+    const double step_pts = std::max(1.0, v * tau / ds);
+
+    double target = 0.0;
+    for (int k = 0; k < n; ++k) {
+        const auto j = std::min(idx + static_cast<std::size_t>(target), traj.size() - 1);
+        kap[static_cast<std::size_t>(k)] = traj[j].curvature;
+        target += step_pts;
+    }
+    return kap;
+}
+
+}  // namespace
+
 ControlCmd ComputeControl(CtrlMode mode, const Trajectory& traj, const VehicleState& s,
                           const TrajPoint& rp, std::size_t idx, const SimConfig& cfg) {
     switch (mode) {
@@ -92,6 +121,21 @@ ControlCmd ComputeControl(CtrlMode mode, const Trajectory& traj, const VehicleSt
             return PurePursuitCmd(traj, s, idx, cfg.vehicle, cfg.ctrl);
         case CtrlMode::kStanley:
             return StanleyCmd(s, rp, cfg.vehicle, cfg.ctrl);
+        case CtrlMode::kMpc: {
+            // 用与主循环一致的误差定义构造 MPC 状态
+            const double dx = s.x - rp.x;
+            const double dy = s.y - rp.y;
+            MpcState mx;
+            mx.e_y = -dx * std::sin(rp.yaw) + dy * std::cos(rp.yaw);
+            mx.e_yaw = NormalizeAngle(s.yaw - rp.yaw);
+            mx.v_y = s.vy;
+            mx.r = s.yaw_rate;
+
+            const auto kap =
+                CurvaturePreview(traj, idx, s.v, cfg.mpc.tau, cfg.mpc.horizon);
+            LateralMpc mpc(cfg.mpc);
+            return mpc.Compute(s, mx, kap, cfg.vehicle, nullptr);
+        }
     }
     return FeedForward(rp, cfg.vehicle);
 }
@@ -126,6 +170,7 @@ std::string CtrlModeName(CtrlMode m) {
         case CtrlMode::kFeedForward: return "feedforward";
         case CtrlMode::kPurePursuit: return "pure_pursuit";
         case CtrlMode::kStanley: return "stanley";
+        case CtrlMode::kMpc: return "mpc";
     }
     return "unknown";
 }
